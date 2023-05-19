@@ -7,18 +7,38 @@ class DOMHelper {
 }
 
 class Tooltip {
-  isFirstTime = true;
+  #tooltipContent;
+  #isFirstTime;
+  #prjItemEl;
+  constructor(tooltipContent,prjItemEl){
+    this.#prjItemEl=prjItemEl;
+    this.#tooltipContent=tooltipContent;
+    this.#isFirstTime = true;
+  }
   show() {
-    if (this.isFirstTime) {
+    if (this.#isFirstTime) {
       const tooltipEl = document.createElement("div");
       tooltipEl.className = "card";
-      tooltipEl.textContent = `This is the Tooltip!`;
+
+      const tooltipTemplate=document.getElementById('tooltip');
+      const tooltipBody = document.importNode(tooltipTemplate.content,true);
+      tooltipBody.querySelector('p').textContent=this.#tooltipContent;
+      tooltipEl.append(tooltipBody);
+      
+
+      const tooltipX = this.#prjItemEl.offsetLeft;
+      const tooltipY = this.#prjItemEl.offsetTop + this.#prjItemEl.offsetHeight - this.#prjItemEl.parentElement.scrollTop - 5;
+      tooltipEl.style.position ='absolute';
+      tooltipEl.style.left = tooltipX + 'px' ;
+      tooltipEl.style.top  = tooltipY + 'px' ;
+
+
       tooltipEl.addEventListener("click", (_) => {
         tooltipEl.remove();
-        this.isFirstTime = true;
+        this.#isFirstTime = true;
       });
       document.body.append(tooltipEl);
-      this.isFirstTime = false;
+      this.#isFirstTime = false;
     }
   }
 }
@@ -32,26 +52,29 @@ class ProjectItem {
   #switchBtnEl;
   #switchBtnHandler;
   #listType;
-  tooltip = new Tooltip();
-
+  #tooltip;
+  
   constructor(id, switchHandler) {
     this.#id = id;
     this.#switchBtnHandler = switchHandler;
-
+    
     this.#prjItemEl = document.getElementById(this.#id);
+    this.#tooltip = new Tooltip(this.#prjItemEl.dataset.extraInfo,this.#prjItemEl);
     this.#titleEl = this.#prjItemEl.querySelector("h2");
     this.#descriptionEl = this.#prjItemEl.querySelector("p");
     this.#moreInfoBtnEl = this.#prjItemEl.querySelector("button");
     this.#switchBtnEl = this.#moreInfoBtnEl.nextElementSibling;
-
+    
     this.#switchBtnEl.addEventListener(
-      "click",
-      this.#switchBtnHandler.bind(null, this)
+      "click",_=>{
+        this.#switchBtnHandler(this);
+        this.#prjItemEl.scrollIntoView({behavior:"smooth"})
+      }
     );
 
     this.#moreInfoBtnEl.addEventListener(
       "click",
-      this.moreInfoBtnHandler.bind(this)
+      this.#tooltip.show.bind(this.#tooltip)
     );
   }
 
@@ -70,9 +93,6 @@ class ProjectItem {
       this.#listType === "active" ? "Finish" : "Activate";
   }
 
-  moreInfoBtnHandler() {
-    this.tooltip.show();
-  }
 
   get id() {
     return this.#id;
@@ -103,7 +123,6 @@ class ProjectList {
   switchProject(projectItemObj) {
     this.projects.delete(projectItemObj);
     this.switchHandler(projectItemObj);
-    console.log(this.projects);
   }
 
   setSwitchHandler(switchHandlerFn) {
